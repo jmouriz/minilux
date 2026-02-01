@@ -449,7 +449,7 @@ impl Interpreter {
             }
             Expr::FunctionCall { name, args } => {
                 match name.as_str() {
-                    "len" => {
+                    "len" | "strlen" => {
                         if let Some(arg) = args.first() {
                             let val = self.eval_expr(arg)?;
                             match val {
