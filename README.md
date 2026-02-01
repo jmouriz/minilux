@@ -1,5 +1,5 @@
 # minilux
-## A small, multipurpose programming language
+### A small, multipurpose programming language
 
 ![minilux logo](minilux.png)
 
