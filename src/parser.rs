@@ -11,6 +11,7 @@ use std::collections::VecDeque;
 pub enum Expr {
     Int(i64),
     String(String),
+    Regex(String),
     Variable(String),
     Binary {
         left: Box<Expr>,
@@ -42,6 +43,7 @@ pub enum BinOp {
     Modulo,
     Equal,
     NotEqual,
+    Match,
     Less,
     LessEqual,
     Greater,
@@ -874,6 +876,7 @@ impl Parser {
         while let Some(op) = match self.current() {
             Token::EqualEqual => Some(BinOp::Equal),
             Token::NotEqual => Some(BinOp::NotEqual),
+            Token::Match => Some(BinOp::Match),
             _ => None,
         } {
             self.advance();
@@ -1001,6 +1004,10 @@ impl Parser {
             Token::String(s) => {
                 self.advance();
                 Expr::String(s)
+            }
+            Token::Regex(pat) => {
+                self.advance();
+                Expr::Regex(pat)
             }
             Token::Len => {
                 self.advance();

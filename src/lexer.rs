@@ -12,6 +12,7 @@ pub enum Token {
     // Literals
     Int(i64),
     String(String),
+    Regex(String),
     Variable(String),
 
     // Keywords
@@ -62,6 +63,7 @@ pub enum Token {
     Ampersand,
     Pipe,
     At,
+    Match,
 
     // Delimiters
     LeftBrace,
@@ -82,6 +84,7 @@ pub enum Token {
 pub struct Lexer<'a> {
     input: Peekable<Chars<'a>>,
     current: Option<char>,
+    last_can_end_expr: bool,
 }
 
 impl<'a> Lexer<'a> {
@@ -89,6 +92,7 @@ impl<'a> Lexer<'a> {
         let mut lexer = Lexer {
             input: input.chars().peekable(),
             current: None,
+            last_can_end_expr: false,
         };
         lexer.advance();
         lexer
@@ -131,7 +135,7 @@ impl<'a> Lexer<'a> {
                 break;
             } else if ch == '\\' {
                 self.advance();
-                match self.current {
+                let _tok = match self.current {
                     Some('n') => result.push('\n'),
                     Some('t') => result.push('\t'),
                     Some('r') => result.push('\r'),
@@ -140,7 +144,7 @@ impl<'a> Lexer<'a> {
                     Some('\'') => result.push('\''),
                     Some(c) => result.push(c),
                     None => break,
-                }
+                };
                 self.advance();
             } else {
                 result.push(ch);
@@ -150,6 +154,42 @@ impl<'a> Lexer<'a> {
 
         result
     }
+
+fn read_regex(&mut self) -> String {
+    // Assumes the leading '/' has already been consumed.
+    let mut result = String::new();
+
+    while let Some(ch) = self.current {
+        if ch == '/' {
+            // End of regex literal
+            self.advance();
+            break;
+        } else if ch == '\\' {
+            // Keep escapes so the regex engine sees them.
+            self.advance();
+            let _tok = match self.current {
+                Some('/') => {
+                    result.push('/');
+                    self.advance();
+                }
+                Some(c) => {
+                    result.push('\\');
+                    result.push(c);
+                    self.advance();
+                }
+                None => break,
+            };
+        } else if ch == '\n' {
+            // Don't let regex literals span lines in this simple language.
+            break;
+        } else {
+            result.push(ch);
+            self.advance();
+        }
+    }
+
+    result
+}
 
     fn read_number(&mut self) -> i64 {
         let mut num_str = String::new();
@@ -188,7 +228,7 @@ impl<'a> Lexer<'a> {
             break;
         }
 
-        match self.current {
+        let tok = match self.current {
             None => Token::Eof,
             Some('\n') => {
                 self.advance();
@@ -208,7 +248,11 @@ impl<'a> Lexer<'a> {
             }
             Some('/') => {
                 self.advance();
-                Token::Slash
+                if self.last_can_end_expr {
+                    Token::Slash
+                } else {
+                    Token::Regex(self.read_regex())
+                }
             }
             Some('%') => {
                 self.advance();
@@ -219,6 +263,9 @@ impl<'a> Lexer<'a> {
                 if self.current == Some('=') {
                     self.advance();
                     Token::EqualEqual
+                } else if self.current == Some('~') {
+                    self.advance();
+                    Token::Match
                 } else {
                     Token::Equals
                 }
@@ -354,9 +401,20 @@ impl<'a> Lexer<'a> {
             Some(_) => {
                 self.advance();
                 self.next_token()
-            }
-        }
-    }
+            }    };
+
+    self.last_can_end_expr = matches!(
+        tok,
+        Token::Int(_)
+            | Token::String(_)
+            | Token::Regex(_)
+            | Token::Variable(_)
+            | Token::RightParen
+            | Token::RightBracket
+    );
+
+    tok
+}
 
     pub fn tokenize(&mut self) -> Vec<Token> {
         let mut tokens = Vec::new();

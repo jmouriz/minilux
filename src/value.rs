@@ -13,6 +13,7 @@ pub enum Value {
     Int(i64),
     String(String),
     Array(Vec<Value>),
+    Regex(String),
     Nil,
 }
 
@@ -26,6 +27,7 @@ impl Value {
                 let items: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
                 format!("[{}]", items.join(", "))
             }
+            Value::Regex(p) => format!("/{}/", p),
             Value::Nil => "nil".to_string(),
         }
     }
@@ -36,6 +38,7 @@ impl Value {
             Value::Int(n) => *n,
             Value::String(s) => s.parse().unwrap_or(0),
             Value::Array(_) => 0,
+            Value::Regex(_) => 0,
             Value::Nil => 0,
         }
     }
@@ -46,6 +49,7 @@ impl Value {
             Value::Int(n) => *n != 0,
             Value::String(s) => !s.is_empty(),
             Value::Array(arr) => !arr.is_empty(),
+            Value::Regex(p) => !p.is_empty(),
             Value::Nil => false,
         }
     }
@@ -58,6 +62,7 @@ impl Value {
             (Value::Nil, Value::Nil) => true,
             (Value::Int(a), Value::String(b)) => a.to_string() == *b,
             (Value::String(a), Value::Int(b)) => a == &b.to_string(),
+            (Value::Regex(a), Value::Regex(b)) => a == b,
             _ => false,
         }
     }

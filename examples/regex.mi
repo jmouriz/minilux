@@ -1,0 +1,53 @@
+# --- Aritmética con / (división) ---
+$a = 100;
+$b = 8;
+
+$q = $a / $b;       # 100 / 8 = 12 (si es int)
+$r = $a % $b;       # 100 % 8 = 4
+
+printf("a=%d b=%d\n", $a, $b);
+printf("q=a/b=%d r=a%%b=%d\n", $q, $r);
+
+# --- Comparaciones numéricas ---
+if $q > 10 {
+  printf("OK: q > 10\n");
+}
+
+if $r == 4 {
+  printf("OK: r == 4\n");
+}
+
+if $b != 10 {
+  printf("OK: b != 10\n");
+}
+
+if $q < 20 {
+  printf("OK: q < 20\n");
+}
+
+# --- Comparaciones con regex (=~ y /regex/) ---
+$name = "Juanma";
+$email = "juanma@example.com";
+$path = "/api/v1/users/42";
+
+if $name =~ /^Jua/ {
+  printf("OK: name starts with 'Jua'\n");
+}
+
+if $email =~ /@example\.com$/ {
+  printf("OK: email ends with @example.com\n");
+}
+
+if $path =~ /^\/api\/v[0-9]+\/users\/[0-9]+$/ {
+  printf("OK: path matches API users pattern\n");
+}
+
+# --- División vs regex: ambos en el mismo archivo ---
+# Esto prueba que "/2" es división porque viene después de un número/variable,
+# y "/^.../" es regex porque viene después de "=~".
+$half = 64 / 2;
+printf("64/2=%d\n", $half);
+
+if $half == 32 {
+  printf("OK: half == 32\n");
+}

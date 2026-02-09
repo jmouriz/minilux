@@ -7,6 +7,7 @@
 use crate::parser::{BinOp, Expr, Statement, UnaryOp};
 use crate::runtime::Runtime;
 use crate::value::Value;
+use regex::Regex;
 use std::env;
 use std::fs;
 use std::io::{self, Read, Write};
@@ -162,6 +163,7 @@ impl Interpreter {
                         Value::Int(n) => output.push_str(&n.to_string()),
                         Value::String(s) => output.push_str(&s),
                         Value::Array(arr) => output.push_str(&format!("[Array({})]", arr.len())),
+                        Value::Regex(p) => output.push_str(&format!("/{}/", p)),
                         Value::Nil => (),
                     }
                 }
@@ -365,6 +367,7 @@ impl Interpreter {
         match expr {
             Expr::Int(n) => Ok(Value::Int(*n)),
             Expr::String(s) => Ok(Value::String(s.clone())),
+            Expr::Regex(pat) => Ok(Value::Regex(pat.clone())),
             Expr::Variable(name) => Ok(self.runtime.get_var(name)),
             Expr::Binary { left, op, right } => {
                 let left_val = self.eval_expr(left)?;
@@ -414,6 +417,17 @@ impl Interpreter {
                     } else {
                         0
                     }),
+BinOp::Match => {
+    let text = left_val.to_string();
+    let pat = match right_val {
+        Value::Regex(p) => p,
+        Value::String(s) => s,
+        other => other.to_string(),
+    };
+    let re = Regex::new(&pat)
+        .map_err(|e| format!("Invalid regex /{}/: {}", pat, e))?;
+    Value::Int(if re.is_match(&text) { 1 } else { 0 })
+}
                 })
             }
             Expr::Unary { op, expr } => {
@@ -503,7 +517,7 @@ impl Interpreter {
                                         Err(_) => Ok(Value::Int(0)),
                                     }
                                 }
-                                Value::Array(_) | Value::Nil => Ok(Value::Int(0)),
+                                Value::Array(_) | Value::Nil | Value::Regex(_) => Ok(Value::Int(0)),
                             }
                         } else {
                             Ok(Value::Int(0))
