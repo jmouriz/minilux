@@ -1,28 +1,25 @@
-function grep($list, $exp) {
-    $i = 0
-    $res = []
-    while ($i < len($list)) {
-        if ($list[$i] =~ $exp) {
-            push $res, $list[$i]
+include "../modules/grep.mi"
+
+function summary($matches) {
+    $count = len($matches)
+
+    if ($count == 0) {
+        printf("No matches\n");
+    } else {
+        printf($count, " matches:\n\n");
+        $i = 0
+        while ($i < $count) {
+            printf($matches[$i], "\n");
+            inc $i + 1
         }
-        inc $i + 1
-    }
-    return $res
-}
-
-$items = ["juanma", "pedro", "Juana", "maria", "JULIO"]
-
-$matches = grep($items, /^J/);
-
-$count = len($matches)
-
-if ($count == 0) {
-    printf("No matches\n");
-} else {
-    printf($count, " matches:\n\n");
-    $i = 0
-    while ($i < $count) {
-        printf($matches[$i], "\n");
-        inc $i + 1
     }
 }
+
+$items = ["juanma", "Alexia", "pedro", "JUANA", "maria", "JULIO"]
+
+$matches = grep($items, /^J/)
+summary($matches)
+
+printf("---\n");
+
+summary(grep($items, /a$/))

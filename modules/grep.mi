@@ -1,0 +1,11 @@
+function grep($list, $exp) {
+    $i = 0
+    $res = []
+    while ($i < len($list)) {
+        if ($list[$i] =~ $exp) {
+            push $res, $list[$i]
+        }
+        inc $i + 1
+    }
+    return $res
+}
