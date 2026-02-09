@@ -1,0 +1,15 @@
+$items = ["juanma", "pedro", "Juana", "maria", "JULIO"]
+
+$i = 0
+$matches = 0;
+while ($i < len($items)) {
+    if ($items[$i] =~ /^J/) {
+        printf("Matches: ", $items[$i], "\n");
+        inc $matches + 1
+    }
+    inc $i + 1
+}
+
+if ($matches == 0) {
+    printf("No matches\n");
+}
