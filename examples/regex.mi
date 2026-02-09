@@ -9,19 +9,19 @@ printf("a=%d b=%d\n", $a, $b);
 printf("q=a/b=%d r=a%%b=%d\n", $q, $r);
 
 # --- Comparaciones numéricas ---
-if $q > 10 {
+if ($q > 10) {
   printf("OK: q > 10\n");
 }
 
-if $r == 4 {
+if ($r == 4) {
   printf("OK: r == 4\n");
 }
 
-if $b != 10 {
+if ($b != 10) {
   printf("OK: b != 10\n");
 }
 
-if $q < 20 {
+if ($q < 20) {
   printf("OK: q < 20\n");
 }
 
@@ -30,15 +30,15 @@ $name = "Juanma";
 $email = "juanma@example.com";
 $path = "/api/v1/users/42";
 
-if $name =~ /^Jua/ {
+if ($name =~ /^Jua/) {
   printf("OK: name starts with 'Jua'\n");
 }
 
-if $email =~ /@example\.com$/ {
+if ($email =~ /@example\.com$/) {
   printf("OK: email ends with @example.com\n");
 }
 
-if $path =~ /^\/api\/v[0-9]+\/users\/[0-9]+$/ {
+if ($path =~ /^\/api\/v[0-9]+\/users\/[0-9]+$/) {
   printf("OK: path matches API users pattern\n");
 }
 
@@ -48,6 +48,6 @@ if $path =~ /^\/api\/v[0-9]+\/users\/[0-9]+$/ {
 $half = 64 / 2;
 printf("64/2=%d\n", $half);
 
-if $half == 32 {
+if ($half == 32) {
   printf("OK: half == 32\n");
 }
