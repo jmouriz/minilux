@@ -129,6 +129,7 @@ pub enum Statement {
     },
     FunctionDef {
         name: String,
+        params: Vec<String>,
         body: Vec<Statement>,
     },
     FunctionCall {
@@ -230,6 +231,9 @@ impl Parser {
 
                 if self.current() == &Token::LeftBrace {
                     self.tokens.push_front(Token::LeftBrace);
+                    self.tokens.push_front(Token::Variable(saved_name.clone()));
+                    self.parse_function_call()
+                } else if self.current() == &Token::LeftParen {
                     self.tokens.push_front(Token::Variable(saved_name.clone()));
                     self.parse_function_call()
                 } else if self.current() == &Token::Equals || self.current() == &Token::LeftBracket
@@ -757,9 +761,37 @@ impl Parser {
             return None;
         };
 
+        let mut params: Vec<String> = Vec::new();
+
         if self.current() == &Token::LeftParen {
             self.advance();
-            self.expect(Token::RightParen);
+
+            // Parse 0+ params: ($a, $b, ...)
+            if self.current() != &Token::RightParen {
+                loop {
+                    match self.current() {
+                        Token::Variable(p) => {
+                            params.push(p.clone());
+                            self.advance();
+                        }
+                        _ => {
+                            // Invalid parameter list
+                            return None;
+                        }
+                    }
+
+                    if self.current() == &Token::Comma {
+                        self.advance();
+                        continue;
+                    }
+
+                    break;
+                }
+            }
+
+            if !self.expect(Token::RightParen) {
+                return None;
+            }
         }
 
         if !self.expect(Token::LeftBrace) {
@@ -768,7 +800,7 @@ impl Parser {
 
         let body = self.parse_block();
 
-        Some(Statement::FunctionDef { name, body })
+        Some(Statement::FunctionDef { name, params, body })
     }
 
     fn parse_return(&mut self) -> Option<Statement> {
@@ -793,25 +825,37 @@ impl Parser {
             let fname = name.clone();
             self.advance();
 
-            let _args: Vec<Expr> = Vec::new(); // TODO: parse args if needed
+            let mut args: Vec<Expr> = Vec::new();
 
+            // Parse optional argument list: fname(expr, expr, ...)
+            if self.expect(Token::LeftParen) {
+                if !self.expect(Token::RightParen) {
+                    loop {
+                        args.push(self.parse_expr());
+                        if self.expect(Token::Comma) {
+                            continue;
+                        }
+                        if !self.expect(Token::RightParen) {
+                            return None;
+                        }
+                        break;
+                    }
+                }
+            }
+
+            // Optional legacy syntax: fname { ... }
             if self.expect(Token::LeftBrace) {
                 let _body = self.parse_block();
-                return Some(Statement::FunctionCall {
-                    name: fname,
-                    args: vec![],
-                });
+                // (Currently ignored; kept for backwards-compat.)
             }
 
             self.skip_statement_end();
-            Some(Statement::FunctionCall {
-                name: fname,
-                args: vec![],
-            })
+            Some(Statement::FunctionCall { name: fname, args })
         } else {
             None
         }
     }
+
 
     fn parse_function_call_simple(&mut self, name: String) -> Option<Statement> {
         self.skip_statement_end();

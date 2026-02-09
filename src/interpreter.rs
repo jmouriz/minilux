@@ -323,8 +323,9 @@ impl Interpreter {
                     Err(e) => Err(format!("Failed to include file: {}", e)),
                 }
             }
-            Statement::FunctionDef { name, body } => {
-                self.runtime.define_function(name.clone(), body.clone());
+            Statement::FunctionDef { name, params, body } => {
+                self.runtime
+                    .define_function(name.clone(), params.clone(), body.clone());
                 Ok(None)
             }
             Statement::FunctionCall { name, args } => {
@@ -338,13 +339,44 @@ impl Interpreter {
                     return Ok(None);
                 }
 
-                if let Some(body) = self.runtime.get_function(name) {
+                if let Some((params, body)) = self.runtime.get_function(name) {
+                    // Evaluate arguments
+                    let mut arg_vals: Vec<Value> = Vec::new();
+                    for arg in args {
+                        arg_vals.push(self.eval_expr(arg)?);
+                    }
+
+                    // Bind params (save old values for restoration)
+                    let mut saved: Vec<(String, Option<Value>)> = Vec::new();
+                    for (i, p) in params.iter().enumerate() {
+                        let old = match self.runtime.get_var(p) {
+                            Value::Nil => None,
+                            v => Some(v),
+                        };
+                        saved.push((p.clone(), old));
+                        let v = arg_vals.get(i).cloned().unwrap_or(Value::Nil);
+                        self.runtime.set_var(p.clone(), v);
+                    }
+
+                    // Execute body
+                    let mut ret: Option<Value> = None;
                     for stmt in &body {
                         if let Ok(Some(val)) = self.execute_statement(stmt) {
-                            return Ok(Some(val));
+                            ret = Some(val);
+                            break;
                         }
                     }
-                    Ok(None)
+
+                    // Restore params
+                    for (p, old) in saved.into_iter() {
+                        if let Some(v) = old {
+                            self.runtime.set_var(p, v);
+                        } else {
+                            self.runtime.remove_var(&p);
+                        }
+                    }
+
+                    Ok(ret)
                 } else {
                     eprintln!("Warning: function '{}' not defined", name);
                     Ok(None)
@@ -550,10 +582,49 @@ BinOp::Match => {
                         }
                     }
                     _ => {
-                        eprintln!("Warning: unknown function '{}'", name);
-                        Ok(Value::Nil)
-                    }
-                }
+                        if let Some((params, body)) = self.runtime.get_function(name) {
+                            // Evaluate args
+                            let mut arg_vals: Vec<Value> = Vec::new();
+                            for arg in args {
+                                arg_vals.push(self.eval_expr(arg)?);
+                            }
+
+                            // Bind params
+                            let mut saved: Vec<(String, Option<Value>)> = Vec::new();
+                            for (i, p) in params.iter().enumerate() {
+                                let old = match self.runtime.get_var(p) {
+                                    Value::Nil => None,
+                                    v => Some(v),
+                                };
+                                saved.push((p.clone(), old));
+                                let v = arg_vals.get(i).cloned().unwrap_or(Value::Nil);
+                                self.runtime.set_var(p.clone(), v);
+                            }
+
+                            // Execute
+                            let mut ret: Value = Value::Nil;
+                            for stmt in &body {
+                                if let Ok(Some(val)) = self.execute_statement(stmt) {
+                                    ret = val;
+                                    break;
+                                }
+                            }
+
+                            // Restore
+                            for (p, old) in saved.into_iter() {
+                                if let Some(v) = old {
+                                    self.runtime.set_var(p, v);
+                                } else {
+                                    self.runtime.remove_var(&p);
+                                }
+                            }
+
+                            Ok(ret)
+                        } else {
+                            eprintln!("Warning: unknown function '{}'", name);
+                            Ok(Value::Nil)
+                        }
+                    }}
             }
         }
     }

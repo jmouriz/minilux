@@ -12,7 +12,7 @@ use std::net::TcpStream;
 pub struct Runtime {
     variables: HashMap<String, Value>,
     sockets: HashMap<String, TcpStream>,
-    functions: HashMap<String, Vec<Statement>>,
+    functions: HashMap<String, (Vec<String>, Vec<Statement>)>,
 }
 
 impl Runtime {
@@ -32,6 +32,11 @@ impl Runtime {
         self.variables.insert(name, value);
     }
 
+    pub fn remove_var(&mut self, name: &str) {
+        self.variables.remove(name);
+    }
+
+
     pub fn get_socket(&mut self, name: &str) -> Option<&mut TcpStream> {
         self.sockets.get_mut(name)
     }
@@ -49,11 +54,11 @@ impl Runtime {
         self.sockets.contains_key(name)
     }
 
-    pub fn define_function(&mut self, name: String, body: Vec<Statement>) {
-        self.functions.insert(name, body);
+    pub fn define_function(&mut self, name: String, params: Vec<String>, body: Vec<Statement>) {
+        self.functions.insert(name, (params, body));
     }
 
-    pub fn get_function(&self, name: &str) -> Option<Vec<Statement>> {
+    pub fn get_function(&self, name: &str) -> Option<(Vec<String>, Vec<Statement>)> {
         self.functions.get(name).cloned()
     }
 

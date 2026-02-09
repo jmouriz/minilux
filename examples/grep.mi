@@ -1,15 +1,28 @@
-$items = ["juanma", "pedro", "Juana", "maria", "JULIO"]
-
-$i = 0
-$matches = 0;
-while ($i < len($items)) {
-    if ($items[$i] =~ /^J/) {
-        printf("Matches: ", $items[$i], "\n");
-        inc $matches + 1
+function grep($list, $exp) {
+    $i = 0
+    $res = []
+    while ($i < len($list)) {
+        if ($list[$i] =~ $exp) {
+            push $res, $list[$i]
+        }
+        inc $i + 1
     }
-    inc $i + 1
+    return $res
 }
 
-if ($matches == 0) {
+$items = ["juanma", "pedro", "Juana", "maria", "JULIO"]
+
+$matches = grep($items, /^J/);
+
+$count = len($matches)
+
+if ($count == 0) {
     printf("No matches\n");
+} else {
+    printf($count, " matches:\n\n");
+    $i = 0
+    while ($i < $count) {
+        printf($matches[$i], "\n");
+        inc $i + 1
+    }
 }

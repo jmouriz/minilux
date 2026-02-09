@@ -1,0 +1,16 @@
+$name = "Juanma"
+
+printf("Hello ", $name, "!\n")
+
+function hello($name) {
+    printf("Hello ", $name, "!\n")
+}
+
+hello("Alexia")
+
+function add($a, $b) {
+    return $a + $b
+}
+
+$sum = add(2, 3)
+printf("2 + 3 = ", $sum)
