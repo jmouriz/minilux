@@ -237,7 +237,12 @@ impl Parser {
                 } else if self.current() == &Token::LeftParen {
                     self.tokens.push_front(Token::Variable(saved_name.clone()));
                     self.parse_function_call()
-                } else if self.current() == &Token::Equals || self.current() == &Token::LeftBracket
+                } else if self.current() == &Token::Equals
+                    || self.current() == &Token::PlusEquals
+                    || self.current() == &Token::MinusEquals
+                    || self.current() == &Token::StarEquals
+                    || self.current() == &Token::SlashEquals
+                    || self.current() == &Token::LeftBracket
                 {
                     self.tokens.push_front(Token::Variable(saved_name.clone()));
                     self.parse_assignment()
@@ -384,17 +389,39 @@ impl Parser {
                 });
             }
 
-            if !self.expect(Token::Equals) {
-                return None;
-            }
+// Support compound assignments: +=, -=, *=, /=
+let assign_tok = self.current().clone();
+let assign_op: Option<BinOp> = match assign_tok {
+    Token::PlusEquals => Some(BinOp::Add),
+    Token::MinusEquals => Some(BinOp::Subtract),
+    Token::StarEquals => Some(BinOp::Multiply),
+    Token::SlashEquals => Some(BinOp::Divide),
+    Token::Equals => None,
+    _ => return None,
+};
 
-            let value = self.parse_expr();
-            self.skip_statement_end();
+// consume assignment token
+self.advance();
 
-            Some(Statement::Assignment {
-                var: var_name,
-                value,
-            })
+let rhs = self.parse_expr();
+
+let value = if let Some(op) = assign_op {
+    Expr::Binary {
+        left: Box::new(Expr::Variable(var_name.clone())),
+        op,
+        right: Box::new(rhs),
+    }
+} else {
+    rhs
+};
+
+self.skip_statement_end();
+
+Some(Statement::Assignment {
+    var: var_name,
+    value,
+})
+
         } else {
             None
         }

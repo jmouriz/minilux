@@ -10,7 +10,7 @@ function summary($matches) {
         $i = 0
         while ($i < $count) {
             printf($matches[$i], "\n");
-            inc $i + 1
+            $i += 1
         }
     }
 }

@@ -50,9 +50,13 @@ pub enum Token {
 
     // Operators
     Plus,
+    PlusEquals,
     Minus,
+    MinusEquals,
     Star,
+    StarEquals,
     Slash,
+    SlashEquals,
     Percent,
     Equals,
     EqualEqual,
@@ -293,24 +297,44 @@ fn read_subst_replacement(&mut self) -> String {
             }
             Some('+') => {
                 self.advance();
-                Token::Plus
-            }
+                if self.current == Some('=') {
+                    self.advance();
+                    Token::PlusEquals
+                } else {
+                    Token::Plus
+                }
+              }
             Some('-') => {
                 self.advance();
-                Token::Minus
-            }
+                if self.current == Some('=') {
+                    self.advance();
+                    Token::MinusEquals
+                } else {
+                    Token::Minus
+                }
+              }
             Some('*') => {
                 self.advance();
-                Token::Star
-            }
-            Some('/') => {
-                self.advance();
-                if self.last_can_end_expr {
-                    Token::Slash
+                if self.current == Some('=') {
+                    self.advance();
+                    Token::StarEquals
                 } else {
-                    Token::Regex(self.read_regex())
+                    Token::Star
                 }
-            }
+              }
+            Some('/') => {
+                  self.advance();
+                  if self.last_can_end_expr {
+                      if self.current == Some('=') {
+                          self.advance();
+                          Token::SlashEquals
+                      } else {
+                          Token::Slash
+                      }
+                  } else {
+                      Token::Regex(self.read_regex())
+                  }
+              }
             Some('%') => {
                 self.advance();
                 Token::Percent

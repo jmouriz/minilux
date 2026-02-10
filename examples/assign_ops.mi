@@ -1,0 +1,31 @@
+# Compound assignment demo: += -= *= /=
+
+$x = 10
+printf("start x = ", $x, "\n")
+
+$x += 5
+printf("after x += 5   => ", $x, "\n")
+
+$x -= 2
+printf("after x -= 2   => ", $x, "\n")
+
+$x *= 3
+printf("after x *= 3   => ", $x, "\n")
+
+$x /= 2
+printf("after x /= 2   => ", $x, "\n")
+
+# A tiny “calculator” example
+$a = 7
+$b = 4
+printf("\ncalc:\n")
+printf("a = ", $a, ", b = ", $b, "\n")
+
+$a += $b
+printf("a += b  => ", $a, "\n")
+
+$a *= 2
+printf("a *= 2  => ", $a, "\n")
+
+$a /= 3
+printf("a /= 3  => ", $a, "\n")

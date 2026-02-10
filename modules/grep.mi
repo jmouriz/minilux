@@ -5,7 +5,7 @@ function grep($list, $exp) {
         if ($list[$i] =~ $exp) {
             push $res, $list[$i]
         }
-        inc $i + 1
+        $i += 1
     }
     return $res
 }
