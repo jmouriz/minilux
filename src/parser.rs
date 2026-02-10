@@ -12,6 +12,7 @@ pub enum Expr {
     Int(i64),
     String(String),
     Regex(String),
+    SubstCall { pat: String, repl: String, flags: String, input: Box<Expr> },
     Variable(String),
     Binary {
         left: Box<Expr>,
@@ -1052,6 +1053,16 @@ impl Parser {
             Token::Regex(pat) => {
                 self.advance();
                 Expr::Regex(pat)
+            }
+            Token::Subst { pat, repl, flags } => {
+                self.advance();
+                if self.expect(Token::LeftParen) {
+                    let input = self.parse_expr();
+                    self.expect(Token::RightParen);
+                    Expr::SubstCall { pat, repl, flags, input: Box::new(input) }
+                } else {
+                    Expr::String(String::new())
+                }
             }
             Token::Len => {
                 self.advance();

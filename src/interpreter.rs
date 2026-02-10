@@ -400,6 +400,33 @@ impl Interpreter {
             Expr::Int(n) => Ok(Value::Int(*n)),
             Expr::String(s) => Ok(Value::String(s.clone())),
             Expr::Regex(pat) => Ok(Value::Regex(pat.clone())),
+
+Expr::SubstCall { pat, repl, flags, input } => {
+    let src_val = self.eval_expr(input)?;
+    let src = src_val.to_string();
+
+    let mut mode = String::new();
+    if flags.contains('i') { mode.push('i'); }
+    if flags.contains('m') { mode.push('m'); }
+    if flags.contains('s') { mode.push('s'); }
+
+    let pat2 = if mode.is_empty() {
+        pat.clone()
+    } else {
+        format!("(?{}){}", mode, pat)
+    };
+
+    let re = Regex::new(&pat2)
+        .map_err(|e| format!("Invalid regex /{}/: {}", pat, e))?;
+
+    let out = if flags.contains('g') {
+        re.replace_all(&src, repl.as_str()).to_string()
+    } else {
+        re.replace(&src, repl.as_str()).to_string()
+    };
+
+    Ok(Value::String(out))
+}
             Expr::Variable(name) => Ok(self.runtime.get_var(name)),
             Expr::Binary { left, op, right } => {
                 let left_val = self.eval_expr(left)?;

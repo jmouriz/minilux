@@ -1,0 +1,3 @@
+printf( s/o/O/g("foo"), "\n" )                 # fOO
+printf( s/([0-9]+)/<$1>/g("a1b22"), "\n" )     # a<1>b<22
+printf( s/\s+/ /g("hola   mundo"), "\n" )     # hola mundo

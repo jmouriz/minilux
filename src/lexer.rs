@@ -13,6 +13,7 @@ pub enum Token {
     Int(i64),
     String(String),
     Regex(String),
+    Subst { pat: String, repl: String, flags: String },
     Variable(String),
 
     // Keywords
@@ -191,6 +192,62 @@ fn read_regex(&mut self) -> String {
     result
 }
 
+fn read_subst_replacement(&mut self) -> String {
+    // Assumes we are positioned at the first character of the replacement (right after the '/' delimiter).
+    // Reads until the next unescaped '/' and consumes that delimiter.
+    // Escape handling:
+    //   \/ -> /
+    //   \\ -> \
+    //   \n, \t, \r -> newline/tab/CR
+    // Unknown escapes keep the backslash (e.g. \x -> \x)
+    let mut result = String::new();
+
+    while let Some(ch) = self.current {
+        if ch == '/' {
+            self.advance();
+            break;
+        } else if ch == '\\' {
+            self.advance();
+            match self.current {
+                Some('/') => {
+                    result.push('/');
+                    self.advance();
+                }
+                Some('n') => {
+                    result.push('\n');
+                    self.advance();
+                }
+                Some('t') => {
+                    result.push('\t');
+                    self.advance();
+                }
+                Some('r') => {
+                    result.push('\r');
+                    self.advance();
+                }
+                Some('\\') => {
+                    result.push('\\');
+                    self.advance();
+                }
+                Some(c) => {
+                    result.push('\\');
+                    result.push(c);
+                    self.advance();
+                }
+                None => break,
+            }
+        } else if ch == '\n' {
+            break;
+        } else {
+            result.push(ch);
+            self.advance();
+        }
+    }
+
+    result
+}
+
+
     fn read_number(&mut self) -> i64 {
         let mut num_str = String::new();
         while let Some(ch) = self.current {
@@ -363,6 +420,62 @@ fn read_regex(&mut self) -> String {
             Some('"') => Token::String(self.read_string('"')),
             Some('\'') => Token::String(self.read_string('\'')),
             Some(ch) if ch.is_ascii_digit() => Token::Int(self.read_number()),
+
+Some('s') => {
+    // Substitution literal: s/pat/repl/flags  (used as s/.../.../g(<expr>))
+    if !self.last_can_end_expr && self.peek() == Some('/') {
+        self.advance(); // consume 's'
+        self.advance(); // consume '/'
+        let pat = self.read_regex(); // consumes closing '/'
+        let repl = self.read_subst_replacement(); // consumes closing '/'
+        let mut flags = String::new();
+        while let Some(ch) = self.current {
+            if matches!(ch, 'g' | 'i' | 'm' | 's') {
+                flags.push(ch);
+                self.advance();
+            } else {
+                break;
+            }
+        }
+        Token::Subst { pat, repl, flags }
+    } else {
+        // Fall back to identifier parsing ("s" as variable)
+        let ident = self.read_identifier();
+        match ident.as_str() {
+            "if" => Token::If,
+            "elseif" => Token::Elseif,
+            "else" => Token::Else,
+            "while" => Token::While,
+            "printf" | "print" => Token::Printf,
+            "shell" => Token::Shell,
+            "len" => Token::Len,
+            "sleep" => Token::Sleep,
+            "inc" => Token::Inc,
+            "dec" => Token::Dec,
+            "array" => Token::Array,
+            "push" => Token::Push,
+            "pop" => Token::Pop,
+            "shift" => Token::Shift,
+            "unshift" => Token::Unshift,
+            "sockopen" => Token::Sockopen,
+            "sockclose" => Token::Sockclose,
+            "sockwrite" => Token::Sockwrite,
+            "sockread" => Token::Sockread,
+            "sockstatus" => Token::Sockstatus,
+            "read" => Token::Read,
+            "lower" => Token::Lower,
+            "upper" => Token::Upper,
+            "number" => Token::Number,
+            "include" => Token::Include,
+            "function" | "func" => Token::Function,
+            "return" => Token::Return,
+            "AND" => Token::And,
+            "OR" => Token::Or,
+            _ => Token::Variable(ident),
+        }
+    }
+}
+
             Some(ch) if ch.is_alphabetic() || ch == '_' => {
                 let ident = self.read_identifier();
                 match ident.as_str() {
@@ -408,6 +521,7 @@ fn read_regex(&mut self) -> String {
         Token::Int(_)
             | Token::String(_)
             | Token::Regex(_)
+            | Token::Subst { .. }
             | Token::Variable(_)
             | Token::RightParen
             | Token::RightBracket
