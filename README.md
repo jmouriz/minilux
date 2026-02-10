@@ -15,6 +15,7 @@ Minilux is a minimal language designed for simplicity and learning. It features:
 - **Regular expressions** (literals, match operator, substitution)
 - **TCP sockets** for network programming
 - **Shell integration** for executing system commands
+- **Includes with module search path** (env + CLI override) and **include-cycle guard**
 
 ## Quick Start
 
@@ -243,6 +244,40 @@ printf( s/o/O/g("foo"), "\n" )                 # fOO
 printf( s/([0-9]+)/<$1>/g("a1b22"), "\n" )     # a<1>b<22
 printf( s/\s+/ /g("hola   mundo"), "\n" )     # hola mundo
 ```
+
+## Includes and Modules Path
+
+Minilux supports `include "file.mi"` (or `include "file"` depending on your scripts).  
+When the include target is **not an absolute path**, Minilux searches in this order:
+
+1) The directory of the currently executing script (include stack base directory)  
+2) The modules search path (from `-m/--modules` or `MINILUX_MODULES_PATH`)  
+3) The current working directory (cwd)
+
+### MINILUX_MODULES_PATH
+
+Set `MINILUX_MODULES_PATH` to one or more directories. Multiple paths may be separated by `:` (macOS/Linux) or `;` (Windows):
+
+```sh
+export MINILUX_MODULES_PATH="./modules:./stdlib"
+./minilux examples/showcase.mi
+```
+
+### -m / --modules (runtime override)
+
+Use `-m` (or `--modules`) to override the environment variable at runtime:
+
+```sh
+./minilux -m "./modules:./stdlib" examples/showcase.mi
+# or
+./minilux --modules "./modules:./stdlib" examples/showcase.mi
+```
+
+### Include cycle guard
+
+If a file includes itself (directly or indirectly), Minilux detects the include cycle and aborts with a clear error instead of crashing with a stack overflow.
+
+Tip: keep modules under `modules/` (or `stdlib/`) and keep runnable demos under `examples/` to avoid name collisions.
 
 ### Built-in Functions
 

@@ -1,11 +1,3 @@
-# NOTE:
-# This file is a demo and will FAIL if you run it as "minilux grep.mi".
-# Reason: it does `include "grep.mi"` which includes itself, creating an include cycle.
-#
-# Correct usage:
-# - Put the real module in a separate file (e.g. modules/grep.mi), and
-# - Run a different entry script (e.g. grep_demo.mi) that does: include "grep.mi"
-#   with MINILUX_MODULES_PATH (or -m) pointing to the modules/ directory.
 include "grep.mi"
 
 function summary($matches) {

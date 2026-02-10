@@ -14,19 +14,29 @@ use std::io::{self, Read, Write};
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::collections::HashSet;
 
 pub struct Interpreter {
     runtime: Runtime,
     current_return: Option<Value>,
     base_dirs: Vec<PathBuf>,
+    modules_paths: Vec<PathBuf>,
+    include_in_progress: HashSet<PathBuf>,
 }
 
 impl Interpreter {
     pub fn new() -> Self {
+        let modules_paths = env::var("MINILUX_MODULES_PATH")
+            .ok()
+            .map(|v| Self::parse_modules_path_list(&v))
+            .unwrap_or_default();
+
         Interpreter {
             runtime: Runtime::new(),
             current_return: None,
             base_dirs: vec![env::current_dir().unwrap_or_else(|_| PathBuf::from("."))],
+            modules_paths,
+            include_in_progress: HashSet::new(),
         }
     }
 
@@ -48,13 +58,36 @@ impl Interpreter {
         self.base_dirs.last()
     }
 
-    fn resolve_include_path(&self, path: &str) -> PathBuf {
+        fn parse_modules_path_list(spec: &str) -> Vec<PathBuf> {
+        // Supports multiple paths separated by ':' (Unix) or ';' (Windows).
+        let normalized = spec.replace(';', ":");
+        normalized
+            .split(':')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(PathBuf::from)
+            .map(|p| p.canonicalize().unwrap_or(p))
+            .collect()
+    }
+
+    pub fn set_modules_path(&mut self, spec: &str) {
+        self.modules_paths = Self::parse_modules_path_list(spec);
+    }
+
+fn resolve_include_path(&self, path: &str) -> PathBuf {
         let specified = Path::new(path);
         if specified.is_absolute() {
             return specified.to_path_buf();
         }
 
         if let Some(base) = self.current_base_dir() {
+            let candidate = base.join(specified);
+            if candidate.exists() {
+                return candidate;
+            }
+        }
+
+        for base in &self.modules_paths {
             let candidate = base.join(specified);
             if candidate.exists() {
                 return candidate;
@@ -299,9 +332,20 @@ impl Interpreter {
 
                 Ok(None)
             }
-            Statement::Include { path } => {
+                        Statement::Include { path } => {
                 let resolved_path = self.resolve_include_path(path);
-                match fs::read_to_string(&resolved_path) {
+                let canonical = fs::canonicalize(&resolved_path).unwrap_or_else(|_| resolved_path.clone());
+
+                if self.include_in_progress.contains(&canonical) {
+                    return Err(format!(
+                        "Include cycle detected (already in progress): {}",
+                        canonical.display()
+                    ));
+                }
+
+                self.include_in_progress.insert(canonical.clone());
+
+                let result = match fs::read_to_string(&resolved_path) {
                     Ok(content) => {
                         let mut parser = crate::parser::Parser::new(&content);
                         let stmts = parser.parse();
@@ -321,9 +365,12 @@ impl Interpreter {
                         Ok(None)
                     }
                     Err(e) => Err(format!("Failed to include file: {}", e)),
-                }
+                };
+
+                self.include_in_progress.remove(&canonical);
+                result
             }
-            Statement::FunctionDef { name, params, body } => {
+Statement::FunctionDef { name, params, body } => {
                 self.runtime
                     .define_function(name.clone(), params.clone(), body.clone());
                 Ok(None)
