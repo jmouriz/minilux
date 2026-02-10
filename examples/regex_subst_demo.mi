@@ -1,0 +1,28 @@
+# Regex match + substitution demo
+
+$email = "john.doe+test@example.com"
+
+if ($email =~ /^[^@]+@[^@]+\.[^@]+$/) {
+    printf("Email OK: ", $email, "\n")
+} else {
+    printf("Email INVALID: ", $email, "\n")
+}
+
+# Normalize whitespace
+$messy = "hola     mundo   minilux"
+$clean = s/\s+/ /g($messy)
+printf("Clean: ", $clean, "\n")
+
+# Wrap numbers with <>
+$numbers = "a1b22c333"
+$wrapped = s/([0-9]+)/<$1>/g($numbers)
+printf("Wrapped: ", $wrapped, "\n")
+
+# Case-insensitive replacement
+$text = "Foo foo FOO"
+$fixed = s/foo/bar/ig($text)
+printf("Case-insensitive: ", $fixed, "\n")
+
+# Replace first occurrence only (no 'g')
+$one = s/o/O/("foo")
+printf("First only: ", $one, "\n")

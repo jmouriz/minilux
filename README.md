@@ -3,69 +3,69 @@
 
 ![minilux logo](minilux.png)
 
-
-
 ## About
 
 Minilux is a minimal language designed for simplicity and learning. It features:
 
-- **Variables** with dynamic typing (integers, strings, arrays)
+- **Variables** with dynamic typing (integers, strings, arrays, regex)
 - **Control flow** (if/elseif/else, while loops)
-- **Functions** (user-defined and built-in)
+- **Functions** (user-defined and built-in), including **arguments**
 - **Arrays** with indexing and manipulation operations
 - **String operations** including indexing and interpolation
+- **Regular expressions** (literals, match operator, substitution)
 - **TCP sockets** for network programming
 - **Shell integration** for executing system commands
 
 ## Quick Start
 
-### Building from Source:
+### Building from Source
 
 To build minilux from source, you need the **Rust toolchain** (cargo + rustc)
 
-Install on Debian/Ubuntu/GoldenDog:
-```
+Debian/Ubuntu:
+```sh
 sudo apt install cargo
 ```
 
 Fedora:
-```
+```sh
 sudo dnf install rust cargo
 ```
 
-macOS (via [homebrew](https://brew.sh))
-```
-brew install rust # this installs both rustc and cargo
+macOS (homebrew):
+```sh
+brew install rust
 ```
 
 Other systems:
-```
+```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 ### Build
-
-```
-make  
+```sh
+make
 ```
 
 ### Install
-
-```
+```sh
 make install
 ```
 
 This installs `minilux` to `/usr/bin`, allowing you to run scripts directly with a shebang.
 
-**mac users:** to build on macOS, edit the Makefile and change the path to /usr/local/bin
+**mac users:** to build on macOS, edit the Makefile and change the path to `/usr/local/bin`
 
-To uninstall run 
-```make uninstall``
+To uninstall:
+```sh
+make uninstall
+```
 
-### Rebuild
-remove the target/ dir completely (```rm -rf target/```), and then:
-
-```make uninstall; make clean; make```
+### Rebuild (clean)
+```sh
+rm -rf target/
+make uninstall; make clean; make
+```
 
 ### Run an Example
 
@@ -84,7 +84,7 @@ chmod +x examples/test.mi
 
 ### Variables
 
-Variables start with `$` and can hold integers, strings, or arrays:
+Variables start with `$` and can hold integers, strings, arrays (and regex values):
 
 ```minilux
 $name = "Alexia"
@@ -139,6 +139,19 @@ while ($i <= 5) {
 - `>=` greater than or equal
 - `<=` less than or equal
 
+#### Regex Match Operator
+- `=~` matches a string against a regex
+
+```minilux
+$email = "test@example.com"
+if ($email =~ /^[^@]+@[^@]+\.[^@]+$/) {
+    printf("Valid email\n")
+}
+else {
+    printf("Invalid email\n")
+}
+```
+
 #### Logical Operators
 - `AND` or `&&` logical and
 - `OR` or `||` logical or
@@ -171,8 +184,6 @@ $calc = 1 + (4 / 2)
 
 ### Arrays
 
-Create and manipulate arrays:
-
 ```minilux
 $arr = [1, 2, 3]
 printf("Element 0: ", $arr[0], "\n")
@@ -192,62 +203,83 @@ printf("First char: ", $text[0], "\n")  # prints "H"
 printf("Length: ", len($text), "\n")     # prints "5"
 ```
 
+### Regular Expressions
+
+#### Regex literal: `/.../`
+
+Regex literals use the form `/pattern/`.
+
+- Use `\/` to include a literal `/` inside the pattern.
+- Keep escapes like `\s`, `\d`, `\.` as usual.
+
+```minilux
+$re = /foo[0-9]+/
+```
+
+#### Match with `=~`
+
+```minilux
+$text = "foo123"
+if ($text =~ /foo[0-9]+/) {
+    printf("matched!\n")
+}
+```
+
+#### Substitution literal: `s/pat/repl/flags(expr)`
+
+A callable substitution literal returns a **new string**:
+
+- If there are **no matches**, it returns the input unchanged.
+- Flags supported:
+  - `g` = global replace (all matches)
+  - `i` = case-insensitive
+  - `m` = multi-line mode
+  - `s` = dot matches newline
+
+Replacement supports capture groups `$1..$n`.
+
+```minilux
+printf( s/o/O/g("foo"), "\n" )                 # fOO
+printf( s/([0-9]+)/<$1>/g("a1b22"), "\n" )     # a<1>b<22
+printf( s/\s+/ /g("hola   mundo"), "\n" )     # hola mundo
+```
+
 ### Built-in Functions
 
 #### printf() / print()
 
-Print text and variables by concatenating all arguments:
+Print by concatenating all arguments:
 
 ```minilux
-# Concatenate strings and variables
 printf("Hello, ", $name, "!\n")
 print("I am ", $age, " years old\n")
-
-# Print numbers
 printf("Number: ", 42, "\n")
-
-# Mix text and variables
 printf($name, " is ", $age, " years old\n")
-
-# Single argument
-printf("Hello world\n")
-printf($name)
 ```
-
-`print` is an alias of `printf`; both names behave identically and automatically append a trailing newline when one is missing.
 
 Escape sequences:
 - `\n` newline
 - `\t` tab
 
-**Note:** If the output doesn't end with `\n`, one is automatically added.
-
 #### read()
-
-Read a line from standard input (without the trailing newline) and store it in a variable:
 
 ```minilux
 printf("What is your name?")
 read($name)
-printf("Hello ", $name, "!)
+printf("Hello ", $name, "!\n")
 ```
 
 #### len()
 
-Get the length of strings or arrays:
-
 ```minilux
 $text = "Hello"
-printf("Length: ", len($text), "\n")  # 5
+printf("Length: ", len($text), "\n")
 
 $arr = [1, 2, 3]
-printf("Array length: ", len($arr), "\n")  # 3
+printf("Array length: ", len($arr), "\n")
 ```
 
 #### number()
-
-Convert strings (or existing integers) into numeric values for arithmetic:
-**IMPORTANT:** parser fails return 0 (e.g: giving a non-numeric value for example number(hello))
 
 ```minilux
 read($input)
@@ -257,104 +289,60 @@ printf("Twice is ", $value * 2, "\n")
 
 #### lower() / upper()
 
-Normalize string casing in expressions:
-
 ```minilux
 $answer = "YeS"
 if (lower($answer) == "yes") {
     printf("Confirmed\n")
 }
-
 printf("Shouting: ", upper("minilux"), "\n")
 ```
 
 #### shell()
 
-Execute system shell commands and capture output:
-
 ```minilux
 $user = shell("whoami")
 printf("Current user: ", $user, "\n")
-
-# Commands with pipes
-$count = shell("ls -l | wc -l")
-printf("File count: ", $count, "\n")
-
-# Date commands
-$date = shell("date +%Y-%m-%d")
-printf("Today: ", $date, "\n")
 ```
-
-**Note:** The trailing newline is automatically removed from command output.
 
 #### inc / dec
 
-Increment or decrement variables:
-
 ```minilux
 $counter = 0
-inc $counter + 1   # counter is now 1
-inc $counter + 5   # counter is now 6
-dec $counter - 2   # counter is now 4
+inc $counter + 1
+inc $counter + 5
+dec $counter - 2
 ```
 
 #### Array Operations
 
-- `push $array, value` - Add element to end
-- `pop $array` - Remove element from end
-- `shift $array` - Remove element from beginning
-- `unshift $array, value` - Add element to beginning
-
-```minilux
-$list = [1, 2, 3]
-push $list, 4        # [1, 2, 3, 4]
-pop $list            # [1, 2, 3]
-shift $list          # [2, 3]
-unshift $list, 0     # [0, 2, 3]
-```
+- `push $array, value`
+- `pop $array`
+- `shift $array`
+- `unshift $array, value`
 
 #### Socket Operations
 
-Minilux supports TCP socket programming:
+- `sockopen("name", "host", port)`
+- `sockwrite("name", "data")`
+- `sockread("name", $var)`
+- `sockclose("name")`
 
-- `sockopen("name", "host", port)` - Open a TCP connection
-- `sockwrite("name", "data")` - Send data to socket
-- `sockread("name", $var)` - Read data into variable
-- `sockclose("name")` - Close the socket
+### User-Defined Functions (with arguments)
 
-Example HTTP request:
-
-```minilux
-sockopen("web", "example.com", 80)
-sockwrite("web", "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n")
-sockread("web", $response)
-printf("Response: $response\n")
-sockclose("web")
-```
-
-#### include
-
-Include and execute other minilux files:
+Define functions with `function` and call them with parentheses:
 
 ```minilux
-include "lib.mi"
-```
-
-### User-Defined Functions
-
-Define reusable code blocks with `func`:
-
-```minilux
-func greet {
-    printf("Hello from function!\n")
+function hello($n) {
+    printf("Hello ", $n, "!\n")
 }
 
-func show_name {
-    printf("My name is $name\n")
+function add($a, $b) {
+    return $a + $b
 }
 
-greet
-show_name
+hello("Alexia")
+$sum = add(2, 3)
+printf("2 + 3 = ", $sum, "\n")
 ```
 
 ### Comments
@@ -367,20 +355,11 @@ Minilux scripts use the `.mi` extension.
 
 ### Shebang Support
 
-Make scripts executable with a shebang:
-
 ```minilux
 #!/usr/bin/minilux
 
 $name = "World"
 printf("Hello, $name!\n")
-```
-
-Then run directly:
-
-```sh
-chmod +x script.mi
-./script.mi
 ```
 
 ## Examples
@@ -390,6 +369,7 @@ See the `examples/` directory for sample programs:
 - `array_test_1.mi` - Array operations and string indexing
 - `array_test_2.mi` - Array modification
 - `http_test.mi` - TCP socket usage
+- `regex_subst_demo.mi` - Regex match and substitution
 
 ## Project Structure
 
@@ -408,53 +388,6 @@ minilux/
 └── README.md           # This file
 ```
 
-## Make Targets
-
-- `make` — Build the release binary
-- `make install` — Install to /usr/bin (requires sudo)
-- `make uninstall` — Remove from /usr/bin
-- `make clean` — Remove build artifacts
-
-## Building from Source
-
-Requirements:
-- Rust 1.85.0 or later
-- Cargo (comes with Rust)
-
-```sh
-# Build debug version
-cargo build
-
-# Build optimized release version
-cargo build --release
-
-# Run tests
-./target/release/minilux examples/test.mi
-```
-
-## Why Rust?
-
-This implementation was rewritten from C to Rust to provide:
-
-- **Memory safety** - No segfaults or buffer overflows
-- **Better error handling** - Proper error propagation
-- **Modern tooling** - Cargo for builds and dependencies
-- **Maintainability** - Cleaner, more organized code structure
-- **Type safety** - Catch more bugs at compile time
-
-## Author
-
-**Alexia Michelle**  
-✉️ <alexia@minilux.org>
-
 ## License
 
 This project is licensed under the **Mozilla Public License 2.0**. See the [LICENSE](LICENSE) file for details.
-
-### Contributing
-
-By contributing to **minilux**, you agree to our [Contributing Guidelines](CONTRIBUTING.md) and the **Future Relicensing Notice** contained therein.
-
----
-
-*This interpreter is intentionally small and experimental — a great starting point for learning language design and implementation.*
